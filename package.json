@@ -1,0 +1,17 @@
+{
+  "name": "logs-bot",
+  "version": "0.1.0",
+  "private": true,
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "chalk": "^4.1.1",
+    "dank-twitch-irc": "^4.3.0",
+    "dotenv": "^10.0.0",
+    "mysql2": "^2.2.5",
+    "sequelize": "^6.6.4"
+  }
+}
