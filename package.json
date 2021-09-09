@@ -13,5 +13,8 @@
     "dotenv": "^10.0.0",
     "mysql2": "^2.2.5",
     "sequelize": "^6.6.4"
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0"
   }
 }
