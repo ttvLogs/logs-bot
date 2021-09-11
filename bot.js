@@ -225,7 +225,7 @@ client.on("PRIVMSG", async (message) => {
                                 \`ID\` INT(11) NOT NULL AUTO_INCREMENT,
                                 \`SenderID\` VARCHAR(10) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
                                 \`Name\` VARCHAR(30) NOT NULL DEFAULT 'No name provided' COLLATE 'utf8mb4_general_ci',
-                                \`Message\` TEXT NULL DEFAULT 'No message provided' COLLATE 'utf8mb4_general_ci',
+                                \`Message\` TEXT NULL COLLATE 'utf8mb4_general_ci',
                                 \`Emotes\` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
                                 \`Color\` VARCHAR(7) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
                                 \`Badges\` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
