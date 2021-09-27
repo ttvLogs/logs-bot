@@ -11,6 +11,7 @@
     "chalk": "^4.1.1",
     "dank-twitch-irc": "^4.3.0",
     "dotenv": "^10.0.0",
+    "humanize-duration": "^3.27.0",
     "mysql2": "^2.2.5",
     "sequelize": "^6.6.4"
   },
