@@ -4,9 +4,24 @@ const Sequelize = require("sequelize");
 const { QueryTypes } = require("sequelize");
 const axios = require("axios").default;
 const Twitch = require("dank-twitch-irc");
+const humanize = require("humanize-duration");
 const { ChatClient } = require("dank-twitch-irc");
 
-process.on.error;
+const shortHumanize = humanize.humanizer({
+  language: "shortEn",
+  languages: {
+    shortEn: {
+      y: () => "y",
+      mo: () => "mo",
+      w: () => "w",
+      d: () => "d",
+      h: () => "h",
+      m: () => "m",
+      s: () => "s",
+      ms: () => "ms",
+    },
+  },
+});
 
 const sequelize = new Sequelize(
   process.env.DATABASE,
@@ -148,8 +163,11 @@ const botsToIgnore = [
   "snusbot",
 ];
 
+let messageCount = 0;
+
 client.on("PRIVMSG", async (message) => {
   if (!botsToIgnore.includes(message.senderUsername.toLowerCase())) {
+    message + 1;
     await sequelize
       .query(
         `INSERT INTO 
@@ -204,10 +222,10 @@ client.on("PRIVMSG", async (message) => {
                   if (data.data !== null && data.data !== undefined) {
                     const channelId = data.data.data[0].id;
                     await sequelize
-                      .query(
-                        `SELECT * FROM Channels WHERE ChannelID = ?`,
-                        { replacements: [channelId], type: QueryTypes.SELECT },
-                      )
+                      .query(`SELECT * FROM Channels WHERE ChannelID = ?`, {
+                        replacements: [channelId],
+                        type: QueryTypes.SELECT,
+                      })
                       .then(async (data) => {
                         if (data.length == 0) {
                           await sequelize
@@ -348,10 +366,10 @@ client.on("PRIVMSG", async (message) => {
                   if (data.data !== null) {
                     const channelId = data.data.data[0].id;
                     await sequelize
-                      .query(
-                        `SELECT * FROM Channels WHERE ChannelID = ?`,
-                        { replacements: [channelId], type: QueryTypes.SELECT },
-                      )
+                      .query(`SELECT * FROM Channels WHERE ChannelID = ?`, {
+                        replacements: [channelId],
+                        type: QueryTypes.SELECT,
+                      })
                       .then(async (data) => {
                         if (data.toString() !== ",") {
                           await sequelize
@@ -395,6 +413,20 @@ client.on("PRIVMSG", async (message) => {
                 });
               });
             }
+          }
+          case "ping": {
+            const ms = process.uptime() * 1000;
+            const short = shortHumanize(ms, {
+              units: ["w", "d", "h", "m", "s"],
+              largest: 4,
+              round: true,
+              conjunction: "",
+              spacer: "",
+            });
+            client.say(
+              message.channelName,
+              `@${message.displayName}, Pong! zoilFloof Uptime: ${short}, Logged: ${messageCount} messages.`,
+            );
           }
         }
       } else {
