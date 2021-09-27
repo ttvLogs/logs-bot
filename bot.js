@@ -167,7 +167,7 @@ let messageCount = 0;
 
 client.on("PRIVMSG", async (message) => {
   if (!botsToIgnore.includes(message.senderUsername.toLowerCase())) {
-    message + 1;
+    messageCount = messageCount + 1;
     await sequelize
       .query(
         `INSERT INTO 
