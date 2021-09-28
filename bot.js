@@ -197,6 +197,24 @@ client.on("PRIVMSG", async (message) => {
   if (message.messageText.charAt(0) === prefix) {
     const args = message.messageText.substring(1).split(" ");
     if (args[0] === main) {
+      //gets triggered by any user
+      switch (args[1]){
+        case "ping": {
+          const ms = process.uptime() * 1000;
+          const short = shortHumanize(ms, {
+            units: ["w", "d", "h", "m", "s"],
+            largest: 4,
+            round: true,
+            conjunction: "",
+            spacer: "",
+          });
+          client.say(
+            message.channelName,
+            `@${message.displayName}, Pong! zoilFloof Uptime: ${short}, Logged: ${messageCount} messages.`,
+          );
+        }
+      }
+      //gets triggered only from admins from the .env file
       if (admins.includes(message.senderUsername)) {
         switch (args[1]) {
           case "join": {
@@ -413,20 +431,6 @@ client.on("PRIVMSG", async (message) => {
                 });
               });
             }
-          }
-          case "ping": {
-            const ms = process.uptime() * 1000;
-            const short = shortHumanize(ms, {
-              units: ["w", "d", "h", "m", "s"],
-              largest: 4,
-              round: true,
-              conjunction: "",
-              spacer: "",
-            });
-            client.say(
-              message.channelName,
-              `@${message.displayName}, Pong! zoilFloof Uptime: ${short}, Logged: ${messageCount} messages.`,
-            );
           }
         }
       } else {
