@@ -197,27 +197,9 @@ client.on("PRIVMSG", async (message) => {
   if (message.messageText.charAt(0) === prefix) {
     const args = message.messageText.substring(1).split(" ");
     if (args[0] === main) {
-      //gets triggered by any user
-      switch (args[1]){
-        case "ping": {
-          const ms = process.uptime() * 1000;
-          const short = shortHumanize(ms, {
-            units: ["w", "d", "h", "m", "s"],
-            largest: 4,
-            round: true,
-            conjunction: "",
-            spacer: "",
-          });
-          client.say(
-            message.channelName,
-            `@${message.displayName}, Pong! zoilFloof Uptime: ${short}, Logged: ${messageCount} messages.`,
-          );
-        }
-      }
-      //gets triggered only from admins from the .env file
-      if (admins.includes(message.senderUsername)) {
-        switch (args[1]) {
-          case "join": {
+      switch (args[1]) {
+        case "join": {
+          if (admins.includes(message.senderUsername)) {
             if (!args[2]) {
               client.say(
                 message.channelName,
@@ -360,8 +342,15 @@ client.on("PRIVMSG", async (message) => {
               });
             }
             break;
+          } else {
+            client.say(
+              message.channelName,
+              `@${message.displayName}, So you call these things "chips"? Instead of crispity crunchy munchie crackerjack snackernibbler snap crack n pop westpool chestershire queens lovely jubily delights? Thats rather a bit cringe, innit bruv.`,
+            );
           }
-          case "leave": {
+        }
+        case "leave": {
+          if (admins.includes(message.senderUsername)) {
             if (!args[2]) {
               client.say(
                 message.channelName,
@@ -431,13 +420,27 @@ client.on("PRIVMSG", async (message) => {
                 });
               });
             }
+          } else {
+            client.say(
+              message.channelName,
+              `@${message.displayName}, User: ${channel} does not exists`,
+            );
           }
         }
-      } else {
-        client.say(
-          message.channelName,
-          `@${message.displayName}, So you call these things "chips"? Instead of crispity crunchy munchie crackerjack snackernibbler snap crack n pop westpool chestershire queens lovely jubily delights? Thats rather a bit cringe, innit bruv.`,
-        );
+        case "ping": {
+          const ms = process.uptime() * 1000;
+          const short = shortHumanize(ms, {
+            units: ["w", "d", "h", "m", "s"],
+            largest: 4,
+            round: true,
+            conjunction: "",
+            spacer: "",
+          });
+          client.say(
+            message.channelName,
+            `@${message.displayName}, Pong! zoilFloof Uptime: ${short}, Logged: ${messageCount} messages.`,
+          );
+        }
       }
     }
   }
