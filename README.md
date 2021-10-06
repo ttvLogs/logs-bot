@@ -12,6 +12,10 @@ This bot is used to synchronize messages from the twitch chat with the database 
 yarn
 yarn start
 ```
+or
+```
+pm2 start bot.js --cron "0 5 */7 * *" && pm2 monit
+```
 
 ## Configuration
 
