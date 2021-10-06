@@ -165,12 +165,124 @@ const botsToIgnore = [
 
 let messageCount = 0;
 
+client.on("CLEARCHAT", async (state) => {
+  try {
+    if (!state.wasChatCleared()) {
+      if (state.isTimeout()) {
+        await sequelize
+          .query(
+            `INSERT INTO 
+      ttvUser_${state.ircTags["room-id"]} (SenderID, Name, Message, Emotes, Color, Badges)
+      VALUES (?, ?, ?, ?, ?, ?)`,
+            {
+              replacements: [
+                state.ircTags["target-user-id"],
+                state.targetUsername,
+                `${state.targetUsername} has been timed out for ${state.banDuration} seconds`,
+                null,
+                null,
+                null,
+              ],
+              type: QueryTypes.INSERT,
+            },
+          )
+          .catch(() => {
+            console.warn(
+              chalk.yellow(
+                `[LOGGING] Error while logging mute from channel: ${state.ircTags["room-id"]}`,
+              ),
+            );
+          });
+      }
+      if (state.isPermaban()) {
+        await sequelize
+          .query(
+            `INSERT INTO 
+      ttvUser_${state.ircTags["room-id"]} (SenderID, Name, Message, Emotes, Color, Badges)
+      VALUES (?, ?, ?, ?, ?, ?)`,
+            {
+              replacements: [
+                state.ircTags["target-user-id"],
+                state.targetUsername,
+                `${state.targetUsername} has been banned`,
+                null,
+                null,
+                null,
+              ],
+              type: QueryTypes.INSERT,
+            },
+          )
+          .catch(() => {
+            console.warn(
+              chalk.yellow(
+                `[LOGGING] Error while logging ban from channel: ${state.ircTags["room-id"]}`,
+              ),
+            );
+          });
+      }
+    }
+  } catch (error) {
+    console.error(
+      chalk.red(
+        `[LOGGING] Error while logging delete from channel: ${channelID.data.data[0].id}, error: ${error}`,
+      ),
+    );
+  }
+});
+
+client.on("CLEARMSG", async (msg) => {
+  try {
+    const channelID = await axios({
+      method: "get",
+      url: `https://api.twitch.tv/helix/users?login=${msg.channelName}`,
+      responseType: "json",
+      headers: {
+        "Client-Id": process.env.CLIENTID,
+        Authorization: process.env.BEARER,
+      },
+    });
+    const senderID = await axios({
+      method: "get",
+      url: `https://api.twitch.tv/helix/users?login=${msg.ircTags.login}`,
+      responseType: "json",
+      headers: {
+        "Client-Id": process.env.CLIENTID,
+        Authorization: process.env.BEARER,
+      },
+    });
+    if (channelID.data !== undefined && senderID.data !== undefined) {
+      await sequelize
+        .query(
+          `UPDATE ttvUser_${channelID.data.data[0].id} SET isDeleted = 1
+      WHERE Message = ? AND SenderID = ?`,
+          {
+            replacements: [msg.targetMessageContent, senderID.data.data[0].id],
+            type: QueryTypes.UPDATE,
+          },
+        )
+        .catch(() => {
+          console.warn(
+            chalk.yellow(
+              `[LOGGING] Error while logging delete from channel: ${channelID.data.data[0].id}`,
+            ),
+          );
+        });
+    }
+  } catch (error) {
+    console.error(
+      chalk.red(
+        `[LOGGING] Error while logging delete from channel: ${channelID.data.data[0].id}, error: ${error}`,
+      ),
+    );
+  }
+});
+
 client.on("PRIVMSG", async (message) => {
   if (!botsToIgnore.includes(message.senderUsername.toLowerCase())) {
     messageCount = messageCount + 1;
     await sequelize
       .query(
-        `INSERT INTO 
+        `INSERT INTO
       ttvUser_${message.channelID} (SenderID, Name, Message, Emotes, Color, Badges)
       VALUES (?, ?, ?, ?, ?, ?)`,
         {
@@ -248,6 +360,7 @@ client.on("PRIVMSG", async (message) => {
                                 \`Color\` VARCHAR(7) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
                                 \`Badges\` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
                                 \`Timestamp\` TIMESTAMP NULL DEFAULT current_timestamp(),
+                                \`isDeleted\` TINYINT(4) NOT NULL DEFAULT '0',
                                 PRIMARY KEY (\`ID\`) USING BTREE)
                               COMMENT='Logs from ${channel} channel.'
                               COLLATE='utf8mb4_general_ci'
