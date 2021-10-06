@@ -254,7 +254,7 @@ client.on("CLEARMSG", async (msg) => {
       await sequelize
         .query(
           `UPDATE ttvUser_${channelID.data.data[0].id} SET isDeleted = 1
-      WHERE Message = ? AND SenderID = ?`,
+      WHERE Message = ? AND SenderID = ? LIMIT 1`,
           {
             replacements: [msg.targetMessageContent, senderID.data.data[0].id],
             type: QueryTypes.UPDATE,
