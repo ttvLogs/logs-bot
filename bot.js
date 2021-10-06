@@ -165,12 +165,124 @@ const botsToIgnore = [
 
 let messageCount = 0;
 
+client.on("CLEARCHAT", async (state) => {
+  try {
+    if (!state.wasChatCleared()) {
+      if (state.isTimeout()) {
+        await sequelize
+          .query(
+            `INSERT INTO 
+      ttvUser_${state.ircTags["room-id"]} (SenderID, Name, Message, Emotes, Color, Badges)
+      VALUES (?, ?, ?, ?, ?, ?)`,
+            {
+              replacements: [
+                state.ircTags["target-user-id"],
+                state.targetUsername,
+                `${state.targetUsername} has been timed out for ${state.banDuration} seconds`,
+                null,
+                null,
+                null,
+              ],
+              type: QueryTypes.INSERT,
+            },
+          )
+          .catch(() => {
+            console.warn(
+              chalk.yellow(
+                `[LOGGING] Error while logging mute from channel: ${state.ircTags["room-id"]}`,
+              ),
+            );
+          });
+      }
+      if (state.isPermaban()) {
+        await sequelize
+          .query(
+            `INSERT INTO 
+      ttvUser_${state.ircTags["room-id"]} (SenderID, Name, Message, Emotes, Color, Badges)
+      VALUES (?, ?, ?, ?, ?, ?)`,
+            {
+              replacements: [
+                state.ircTags["target-user-id"],
+                state.targetUsername,
+                `${state.targetUsername} has been banned`,
+                null,
+                null,
+                null,
+              ],
+              type: QueryTypes.INSERT,
+            },
+          )
+          .catch(() => {
+            console.warn(
+              chalk.yellow(
+                `[LOGGING] Error while logging ban from channel: ${state.ircTags["room-id"]}`,
+              ),
+            );
+          });
+      }
+    }
+  } catch (error) {
+    console.error(
+      chalk.red(
+        `[LOGGING] Error while logging delete from channel: ${channelID.data.data[0].id}, error: ${error}`,
+      ),
+    );
+  }
+});
+
+client.on("CLEARMSG", async (msg) => {
+  try {
+    const channelID = await axios({
+      method: "get",
+      url: `https://api.twitch.tv/helix/users?login=${msg.channelName}`,
+      responseType: "json",
+      headers: {
+        "Client-Id": process.env.CLIENTID,
+        Authorization: process.env.BEARER,
+      },
+    });
+    const senderID = await axios({
+      method: "get",
+      url: `https://api.twitch.tv/helix/users?login=${msg.ircTags.login}`,
+      responseType: "json",
+      headers: {
+        "Client-Id": process.env.CLIENTID,
+        Authorization: process.env.BEARER,
+      },
+    });
+    if (channelID.data !== undefined && senderID.data !== undefined) {
+      await sequelize
+        .query(
+          `UPDATE ttvUser_${channelID.data.data[0].id} SET isDeleted = 1
+      WHERE Message = ? AND SenderID = ?`,
+          {
+            replacements: [msg.targetMessageContent, senderID.data.data[0].id],
+            type: QueryTypes.UPDATE,
+          },
+        )
+        .catch(() => {
+          console.warn(
+            chalk.yellow(
+              `[LOGGING] Error while logging delete from channel: ${channelID.data.data[0].id}`,
+            ),
+          );
+        });
+    }
+  } catch (error) {
+    console.error(
+      chalk.red(
+        `[LOGGING] Error while logging delete from channel: ${channelID.data.data[0].id}, error: ${error}`,
+      ),
+    );
+  }
+});
+
 client.on("PRIVMSG", async (message) => {
   if (!botsToIgnore.includes(message.senderUsername.toLowerCase())) {
-    message + 1;
+    messageCount = messageCount + 1;
     await sequelize
       .query(
-        `INSERT INTO 
+        `INSERT INTO
       ttvUser_${message.channelID} (SenderID, Name, Message, Emotes, Color, Badges)
       VALUES (?, ?, ?, ?, ?, ?)`,
         {
@@ -197,9 +309,9 @@ client.on("PRIVMSG", async (message) => {
   if (message.messageText.charAt(0) === prefix) {
     const args = message.messageText.substring(1).split(" ");
     if (args[0] === main) {
-      if (admins.includes(message.senderUsername)) {
-        switch (args[1]) {
-          case "join": {
+      switch (args[1]) {
+        case "join": {
+          if (admins.includes(message.senderUsername)) {
             if (!args[2]) {
               client.say(
                 message.channelName,
@@ -248,6 +360,7 @@ client.on("PRIVMSG", async (message) => {
                                 \`Color\` VARCHAR(7) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
                                 \`Badges\` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
                                 \`Timestamp\` TIMESTAMP NULL DEFAULT current_timestamp(),
+                                \`isDeleted\` TINYINT(4) NOT NULL DEFAULT '0',
                                 PRIMARY KEY (\`ID\`) USING BTREE)
                               COMMENT='Logs from ${channel} channel.'
                               COLLATE='utf8mb4_general_ci'
@@ -342,8 +455,15 @@ client.on("PRIVMSG", async (message) => {
               });
             }
             break;
+          } else {
+            client.say(
+              message.channelName,
+              `@${message.displayName}, So you call these things "chips"? Instead of crispity crunchy munchie crackerjack snackernibbler snap crack n pop westpool chestershire queens lovely jubily delights? Thats rather a bit cringe, innit bruv.`,
+            );
           }
-          case "leave": {
+        }
+        case "leave": {
+          if (admins.includes(message.senderUsername)) {
             if (!args[2]) {
               client.say(
                 message.channelName,
@@ -413,27 +533,27 @@ client.on("PRIVMSG", async (message) => {
                 });
               });
             }
-          }
-          case "ping": {
-            const ms = process.uptime() * 1000;
-            const short = shortHumanize(ms, {
-              units: ["w", "d", "h", "m", "s"],
-              largest: 4,
-              round: true,
-              conjunction: "",
-              spacer: "",
-            });
+          } else {
             client.say(
               message.channelName,
-              `@${message.displayName}, Pong! zoilFloof Uptime: ${short}, Logged: ${messageCount} messages.`,
+              `@${message.displayName}, User: ${channel} does not exists`,
             );
           }
         }
-      } else {
-        client.say(
-          message.channelName,
-          `@${message.displayName}, So you call these things "chips"? Instead of crispity crunchy munchie crackerjack snackernibbler snap crack n pop westpool chestershire queens lovely jubily delights? Thats rather a bit cringe, innit bruv.`,
-        );
+        case "ping": {
+          const ms = process.uptime() * 1000;
+          const short = shortHumanize(ms, {
+            units: ["w", "d", "h", "m", "s"],
+            largest: 4,
+            round: true,
+            conjunction: "",
+            spacer: "",
+          });
+          client.say(
+            message.channelName,
+            `@${message.displayName}, Pong! zoilFloof Uptime: ${short}, Logged: ${messageCount} messages.`,
+          );
+        }
       }
     }
   }
